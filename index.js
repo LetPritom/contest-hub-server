@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require('express');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const cors = require("cors");
 const port = process.env.PORT ||3000;
@@ -38,6 +38,36 @@ async function run() {
       const result = await pendingCollections.insertOne(pendingContest);
       res.send(result);
     })
+
+
+    app.get('/get-pending' , async (req , res) => {
+      const result = await pendingCollections.find({status:'pending'}).toArray()
+      res.send(result);
+    })
+
+
+    // approve data update
+
+    app.patch('/approve-contest' ,async (req , res) => {
+      const {_id } = req.body ;
+      const approveData  =await  pendingCollections.updateOne({_id:new ObjectId(_id)} , {$set : {status:'approved'}})
+      console.log(approveData);
+      res.send(approveData)
+    })
+
+
+    app.get('/approve-contest' , async (req , res) => {
+      const result = await pendingCollections.find({status:'approved'}).toArray()
+      res.send(result);
+    })
+
+
+
+
+
+
+
+
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
