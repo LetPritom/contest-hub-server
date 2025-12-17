@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require('express');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId} = require('mongodb');
 const app = express()
 const cors = require("cors");
 const port = process.env.PORT ||3000;
@@ -50,15 +50,38 @@ async function run() {
 
     app.patch('/approve-contest' ,async (req , res) => {
       const {_id } = req.body ;
-      const approveData  =await  pendingCollections.updateOne({_id:new ObjectId(_id)} , {$set : {status:'approved'}})
-      console.log(approveData);
-      res.send(approveData)
+      const result  =await  pendingCollections.updateOne({_id:new ObjectId(_id)} , {$set : {status:'approved'}})
+      res.send(result)
     })
 
 
+    //sorting data by participate count
+
     app.get('/approve-contest' , async (req , res) => {
+      const result = await pendingCollections.find({status:'approved'}).sort({participant: -1}).limit(6).toArray()
+      res.send(result);
+    })
+
+
+    app.get('/all-approve-contest' , async (req , res) => {
       const result = await pendingCollections.find({status:'approved'}).toArray()
       res.send(result);
+    })
+
+
+
+    app.delete('/delete-contest/:id' ,async ( req, res) => {
+
+      try {
+      const {id} = req.params;
+      const objectId = new ObjectId(id)
+      const result = await pendingCollections.deleteOne({_id: objectId})
+      res.send(result);
+
+      } catch (err) {
+        res.status(400).send({message:'Invalid contest ID'})
+      }
+      
     })
 
 
