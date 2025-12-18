@@ -85,6 +85,24 @@ async function run() {
     })
 
 
+  // single detail router
+
+
+  app.get(`/detail-contest/:id` , async (req , res) => {
+
+    try {
+    const {id} = req.params;
+    const objectId = new ObjectId(id);
+    const result = await pendingCollections.findOne({_id: objectId})
+    res.send(result)
+    console.log(result)
+    } catch(err) {
+      res.status(500).send({message:'Server Error'})
+    }
+    
+  })
+
+
 
 
 
