@@ -25,6 +25,7 @@ async function run() {
 
     const db = client.db("contestDB");
     const pendingCollections = db.collection("pending");
+    const participantCollections = db.collection("participant");
 
     app.post("/pending-contest", async (req, res) => {
       const pendingContest = req.body;
@@ -118,6 +119,7 @@ async function run() {
         mode: "payment",
         metadata: {
           contestId: paymentInfo?.contestId,
+          contest_deadline: Number(paymentInfo?.deadline),
           participant_email: paymentInfo?.participant?.email,
           participant_name: paymentInfo?.participant?.name,
           contestType: paymentInfo?.contestType,
@@ -128,6 +130,63 @@ async function run() {
       });
 
       res.send({ url: session.url });
+    });
+
+    app.post(`/payment-success`, async (req, res) => {
+      try {
+        const { sessionId } = req.body;
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        const contest = await pendingCollections.findOne({
+          _id: new ObjectId(session?.metadata?.contestId),
+        });
+
+        const rawDeadline = session.metadata.contest_deadline;
+        const deadline = rawDeadline ? Number(rawDeadline) : null;
+
+        const participate = await participantCollections.findOne({
+          transactionId: session?.payment_intent,
+        });
+
+        if (session.payment_status === "paid" && contest && !participate) {
+          const participantInfo = {
+            contestId: session?.metadata?.contestId,
+            transactionId: session?.payment_intent,
+            participant_email: session?.metadata?.participant_email,
+            participant_name: session?.metadata?.participant_name,
+            payment_status: session?.payment_status,
+            deadline,
+            created_by: contest?.create_by,
+            contest_name: contest?.name,
+            participant_pay: session?.amount_total / 100,
+            image: contest?.image,
+          };
+
+          console.log(participantInfo);
+
+          const result = await participantCollections.insertOne(
+            participantInfo
+          );
+
+          // update participant count
+
+          if(result.insertedId) {
+             await pendingCollections.updateOne(
+            { _id: new ObjectId(session?.metadata?.contestId) },
+            { $inc: { participant: 1 } }
+          );
+          }
+
+         
+
+          res.send({
+            success: true,
+            transactionId: session.payment_intent,
+            paymentId: result.insertedId,
+          });
+        }
+      } catch (err) {
+        res.status(500).send({ message: "Payment verification failed" });
+      }
     });
 
     // Connect the client to the server	(optional starting in v4.7)
