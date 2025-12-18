@@ -169,14 +169,12 @@ async function run() {
 
           // update participant count
 
-          if(result.insertedId) {
-             await pendingCollections.updateOne(
-            { _id: new ObjectId(session?.metadata?.contestId) },
-            { $inc: { participant: 1 } }
-          );
+          if (result.insertedId) {
+            await pendingCollections.updateOne(
+              { _id: new ObjectId(session?.metadata?.contestId) },
+              { $inc: { participant: 1 } }
+            );
           }
-
-         
 
           res.send({
             success: true,
@@ -188,6 +186,34 @@ async function run() {
         res.status(500).send({ message: "Payment verification failed" });
       }
     });
+
+    //task er jonne route
+
+    app.get(`/submit-task`, async (req, res) => {
+      try {
+        const { email , contestId } = req.query;
+        const result = await participantCollections.findOne({
+          participant_email: email,
+          contestId,
+          payment_status:'paid'
+        });
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    // app.get(`/my-contest` , async (req , res) => {
+
+    //   try {
+    //   const {email} = req.query;
+    //   const result = await participantCollections.find({participant_email: email}).toArray()
+    //   res.send(result)
+    //   } catch(err) {
+    //     console.log(err)
+    //   }
+
+    // })
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
