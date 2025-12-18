@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId} = require('mongodb');
+const stripe = require('stripe')(`${process.env.STRIPE_SECRET_KEY}`);
 const app = express()
 const cors = require("cors");
 const port = process.env.PORT ||3000;
@@ -100,6 +101,31 @@ async function run() {
       res.status(500).send({message:'Server Error'})
     }
     
+  })
+
+
+
+
+  //payment section 
+
+
+  app.post(`/create-checkout-session`, async (req , res) => {
+    const paymentInfo =req.body ;
+    console.log(paymentInfo)
+    // const session = await stripe.checkout.sessions.create({
+    //   line_items: [
+    //   {
+    //     // Provide the exact Price ID (for example, price_1234) of the product you want to sell
+    //     price: {
+    //       currency : 'usd',
+    //       product_data : {
+
+    //       }
+    //     },
+    //     quantity: 1,
+    //   },
+    // ],
+    // })
   })
 
 
