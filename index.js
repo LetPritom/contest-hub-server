@@ -50,6 +50,18 @@ async function run() {
       );
       res.send(result);
     });
+    
+
+    //rejects contest by admin
+
+    app.patch("/reject-contest", async (req, res) => {
+      const { _id } = req.body;
+      const result = await pendingCollections.updateOne(
+        { _id: new ObjectId(_id) },
+        { $set: { status: "rejected" } }
+      );
+      res.send(result);
+    });
 
     //sorting data by participate count
 
@@ -203,17 +215,36 @@ async function run() {
       }
     });
 
-    // app.get(`/my-contest` , async (req , res) => {
 
-    //   try {
-    //   const {email} = req.query;
-    //   const result = await participantCollections.find({participant_email: email}).toArray()
-    //   res.send(result)
-    //   } catch(err) {
-    //     console.log(err)
-    //   }
 
-    // })
+    // creatorContest
+
+    app.get(`/creator-contest` , async (req , res) => {
+
+      try {
+      const {email} = req.query;
+      const result = await pendingCollections.find({'create_by.email': email}).toArray()
+      res.send(result)
+      } catch(err) {
+        console.log(err)
+      }
+
+    })
+
+
+
+
+    app.get(`/my-contest` , async (req , res) => {
+
+      try {
+      const {email} = req.query;
+      const result = await participantCollections.find({participant_email: email}).sort({deadline: 1}).toArray()
+      res.send(result)
+      } catch(err) {
+        console.log(err)
+      }
+
+    })
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
