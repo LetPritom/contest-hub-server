@@ -199,25 +199,9 @@ async function run() {
       }
     });
 
-    //task er jonne route
-
     //------------------dashboard---------------
 
-    app.get(`/submit-task`, async (req, res) => {
-      try {
-        const { email, contestId } = req.query;
-        const result = await participantCollections.findOne({
-          participant_email: email,
-          contestId,
-          payment_status: "paid",
-        });
-        res.send(result);
-      } catch (err) {
-        console.log(err);
-      }
-    });
-
-    //user my contest
+    //user my contest for query
 
     app.get(`/my-contest`, async (req, res) => {
       try {
@@ -277,6 +261,58 @@ async function run() {
         console.log(err);
         res.status(500).send({ message: "Submit failed" });
       }
+    });
+
+    // taskSubmissions get for contest
+
+    app.get(`/submit-task`, async (req, res) => {
+      try {
+        const {contestId} = req.query;
+        const result = await taskSubmissions.find({ contestId :contestId }).toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+    //open submit button
+
+    app.get(`/submit-task-open`, async (req, res) => {
+      try {
+        const { email, contestId } = req.query;
+        const result = await participantCollections.findOne({
+          participant_email: email,
+          contestId,
+          payment_status: "paid",
+        });
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+    });
+
+
+    app.post("/user", async (req, res) => {
+      const userData = req.body;
+      userData.create_at = new Date().toISOString();
+      userData.last_loggedIn = new Date().toISOString();
+      userData.role = "customer";
+      const query = { email: userData.email };
+
+      const alreadyExists = await usersCollections.findOne(query);
+
+      if (alreadyExists) {
+        const result = await usersCollections.updateOne(query, {
+          $set: {
+            last_loggedIn: new Date().toISOString(),
+          },
+        });
+
+        return res.send(result);
+      }
+      const result = await usersCollections.insertOne(userData);
+      console.log(userData);
+      res.send(result);
     });
 
     // Connect the client to the server	(optional starting in v4.7)
