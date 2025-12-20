@@ -27,6 +27,7 @@ async function run() {
     const pendingCollections = db.collection("pending");
     const participantCollections = db.collection("participant");
     const taskSubmissions = db.collection("submission");
+    const usersCollections = db.collection('user')
 
     app.post("/pending-contest", async (req, res) => {
       const pendingContest = req.body;
