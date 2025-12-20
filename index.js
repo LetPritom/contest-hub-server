@@ -26,6 +26,7 @@ async function run() {
     const db = client.db("contestDB");
     const pendingCollections = db.collection("pending");
     const participantCollections = db.collection("participant");
+    const taskSubmissions = db.collection("submission");
 
     app.post("/pending-contest", async (req, res) => {
       const pendingContest = req.body;
@@ -50,7 +51,6 @@ async function run() {
       );
       res.send(result);
     });
-    
 
     //rejects contest by admin
 
@@ -201,13 +201,15 @@ async function run() {
 
     //task er jonne route
 
+    //------------------dashboard---------------
+
     app.get(`/submit-task`, async (req, res) => {
       try {
-        const { email , contestId } = req.query;
+        const { email, contestId } = req.query;
         const result = await participantCollections.findOne({
           participant_email: email,
           contestId,
-          payment_status:'paid'
+          payment_status: "paid",
         });
         res.send(result);
       } catch (err) {
@@ -215,36 +217,67 @@ async function run() {
       }
     });
 
+    //user my contest
 
-
-    // creatorContest
-
-    app.get(`/creator-contest` , async (req , res) => {
-
+    app.get(`/my-contest`, async (req, res) => {
       try {
-      const {email} = req.query;
-      const result = await pendingCollections.find({'create_by.email': email}).toArray()
-      res.send(result)
-      } catch(err) {
-        console.log(err)
+        const { email } = req.query;
+        const result = await participantCollections
+          .find({ participant_email: email })
+          .sort({ deadline: 1 })
+          .toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
       }
+    });
 
-    })
+    // creatorContest ja create korse creator
 
-
-
-
-    app.get(`/my-contest` , async (req , res) => {
-
+    app.get(`/creator-contest`, async (req, res) => {
       try {
-      const {email} = req.query;
-      const result = await participantCollections.find({participant_email: email}).sort({deadline: 1}).toArray()
-      res.send(result)
-      } catch(err) {
-        console.log(err)
+        const { email } = req.query;
+        const result = await pendingCollections
+          .find({ "create_by.email": email })
+          .toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
       }
+    });
 
-    })
+    app.patch(`/edit-contest/:id`, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const updateInfo = req.body;
+        console.log(updateInfo);
+        const objectId = new ObjectId(id);
+        const result = await pendingCollections.updateOne(
+          { _id: objectId },
+          { $set: updateInfo }
+        );
+        res.send(result);
+        console.log(result);
+      } catch (err) {
+        console.log(err.message);
+        res.status(500).send({ error: "Update failed" });
+      }
+    });
+
+    // create submission collections
+
+    app.post(`/submit-task`, async (req, res) => {
+      try {
+        const submitTaskInfo = req.body;
+        if (submitTaskInfo) {
+          const result = await taskSubmissions.insertOne(submitTaskInfo);
+          res.send(result);
+        }
+      } catch (err) {
+        console.log(err);
+        res.status(500).send({ message: "Submit failed" });
+      }
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
