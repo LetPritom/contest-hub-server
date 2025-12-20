@@ -292,6 +292,7 @@ async function run() {
       }
     });
 
+     //winner declared
 
     app.patch(`/announce-winner` , async (req , res) => {
 
@@ -345,6 +346,20 @@ async function run() {
     });
 
 
+
+
+    // get all users
+
+
+  app.get("/all-users", async (req, res) => {
+  try {
+    const result = await usersCollections.find({}).toArray();
+    res.send(result);
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).send({ error: "Failed to fetch users" }); // optional: error response
+  }
+});
 
   // app.patch(`user-role`)
 
