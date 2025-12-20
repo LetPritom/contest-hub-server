@@ -297,7 +297,7 @@ async function run() {
       const userData = req.body;
       userData.create_at = new Date().toISOString();
       userData.last_loggedIn = new Date().toISOString();
-      userData.role = "customer";
+      userData.role = "user";
       const query = { email: userData.email };
 
       const alreadyExists = await usersCollections.findOne(query);
