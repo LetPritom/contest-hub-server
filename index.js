@@ -293,6 +293,34 @@ async function run() {
     });
 
 
+    app.patch(`/announce-winner` , async (req , res) => {
+
+      try{
+      const {_id , contestId} = req.body;
+      const alreadyWinner = await taskSubmissions.findOne({contestId:contestId , isWinner:true })
+      if(alreadyWinner) {
+       return  res.status(409).send({message:'Winner is already declared'});
+      }
+
+      const objectId = new ObjectId(_id)
+
+      const submission = await taskSubmissions.findOne({_id: objectId}) ;
+      if (!submission) {
+        return res.status(409).send({message: 'Submission not found'})
+      }
+
+      await taskSubmissions.updateOne({_id:objectId} , {$set : {isWinner:true}}) 
+
+      await usersCollections.updateOne({email: submission.participant_email} , {$inc:{win : 1}})
+
+      res.send({message:'Winner is declared successfully'})
+      } catch (err) {
+        console.log(err.message)
+      }
+
+    })
+
+
     app.post("/user", async (req, res) => {
       const userData = req.body;
       userData.create_at = new Date().toISOString();
@@ -315,6 +343,28 @@ async function run() {
       console.log(userData);
       res.send(result);
     });
+
+
+
+  // app.patch(`user-role`)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
