@@ -48,6 +48,21 @@ async function run() {
     });
 
 
+    // leaderboard top three
+
+    app.get(`/top-leaders` , async (req , res) => {
+      try{
+
+        const result = await usersCollections.find({}).sort({win:-1}).limit(3).toArray();
+        res.send(result)
+        
+      }catch (err) {
+        console.log(err)
+        res.status(400).send({message:'Top three winner is not declared'})
+      }
+    })
+
+
     // all winner 
 
     app.get(`/all-winner` , async (req , res) => {
