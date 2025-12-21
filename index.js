@@ -6,7 +6,12 @@ const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 3000;
 app.use(express.json());
-app.use(cors());
+
+
+app.use(cors({
+  origin: process.env.CLIENT_DOMAIN,
+  credentials: true
+}))
 
 //context-hub
 //hpHyCkzP1JNDlmcY
@@ -361,7 +366,21 @@ async function run() {
   }
 });
 
-  // app.patch(`user-role`)
+
+
+  app.patch(`/change-role` , async(req , res) => {
+
+    try{
+      const {email , role} = req.body;
+      console.log(email , role);
+      const result = await usersCollections.updateOne({email:email} , {$set: {role:role}});
+      res.send(result)
+    } catch(err) {
+      console.log(err.message)
+    }
+    
+
+  })
 
 
 
