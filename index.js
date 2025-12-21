@@ -47,6 +47,22 @@ async function run() {
       res.send(result);
     });
 
+
+    // all winner 
+
+    app.get(`/all-winner` , async (req , res) => {
+
+      try {
+              const result = await taskSubmissions.find({isWinner: true}).sort({declaredWinnerTime: -1}).toArray()
+      res.send(result)
+      console.log(result)
+      } catch(err) {
+        res.status(200).send({message:'No Winner is available'})
+        console.log(err.message)
+      }
+
+    })
+
     // approve data update
 
     app.patch("/approve-contest", async (req, res) => {
@@ -315,7 +331,7 @@ async function run() {
         return res.status(409).send({message: 'Submission not found'})
       }
 
-      await taskSubmissions.updateOne({_id:objectId} , {$set : {isWinner:true}}) 
+      await taskSubmissions.updateOne({_id:objectId} , {$set : {isWinner:true , declaredWinnerTime: new Date()}}) 
 
       await usersCollections.updateOne({email: submission.participant_email} , {$inc:{win : 1}})
 
@@ -381,6 +397,10 @@ async function run() {
     
 
   })
+
+
+
+
 
 
 
