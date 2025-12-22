@@ -7,11 +7,12 @@ const cors = require("cors");
 const port = process.env.PORT || 3000;
 app.use(express.json());
 
-
-app.use(cors({
-  origin: process.env.CLIENT_DOMAIN,
-  credentials: true
-}))
+app.use(
+  cors({
+    origin: process.env.CLIENT_DOMAIN,
+    credentials: true,
+  })
+);
 
 //context-hub
 //hpHyCkzP1JNDlmcY
@@ -32,7 +33,10 @@ async function run() {
     const pendingCollections = db.collection("pending");
     const participantCollections = db.collection("participant");
     const taskSubmissions = db.collection("submission");
-    const usersCollections = db.collection('user')
+    const usersCollections = db.collection("user");
+
+
+
 
     app.post("/pending-contest", async (req, res) => {
       const pendingContest = req.body;
@@ -47,38 +51,39 @@ async function run() {
       res.send(result);
     });
 
-
     // leaderboard top three
 
-    app.get(`/top-leaders` , async (req , res) => {
-      try{
-
-        const result = await usersCollections.find({}).sort({win:-1}).limit(3).toArray();
-        res.send(result)
-        
-      }catch (err) {
-        console.log(err)
-        res.status(400).send({message:'Top three winner is not declared'})
-      }
-    })
-
-
-    // all winner 
-
-    app.get(`/all-winner` , async (req , res) => {
-
+    app.get(`/top-leaders`, async (req, res) => {
       try {
-              const result = await taskSubmissions.find({isWinner: true}).sort({declaredWinnerTime: -1}).toArray()
-      res.send(result)
-      console.log(result)
-      } catch(err) {
-        res.status(200).send({message:'No Winner is available'})
-        console.log(err.message)
+        const result = await usersCollections
+          .find({})
+          .sort({ win: -1 })
+          .limit(3)
+          .toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+        res.status(400).send({ message: "Top three winner is not declared" });
       }
+    });
 
-    })
+    // all winner
 
-    // approve data update
+    app.get(`/all-winner`, async (req, res) => {
+      try {
+        const result = await taskSubmissions
+          .find({ isWinner: true })
+          .sort({ declaredWinnerTime: -1 })
+          .toArray();
+        res.send(result);
+        console.log(result);
+      } catch (err) {
+        res.status(200).send({ message: "No Winner is available" });
+        console.log(err.message);
+      }
+    });
+
+    // approve data update by admin
 
     app.patch("/approve-contest", async (req, res) => {
       const { _id } = req.body;
@@ -106,10 +111,73 @@ async function run() {
       const result = await pendingCollections
         .find({ status: "approved" })
         .sort({ participant: -1 })
-        .limit(6)
+        .limit(8)
         .toArray();
       res.send(result);
     });
+
+    //search banner jodi search kore taile value asbe 
+
+app.get("/if-search-contest", async (req, res) => {
+  try {
+    const type = req.query.type || "";
+    const query = { status: "approved" };
+
+    if (type.trim()) {
+
+      // jodi search input thake  filter hobe contestType
+
+      query.contestType = { $regex: type, $options: "i" };
+      const result = await pendingCollections.find(query).toArray();
+      res.send(result);
+    } else {
+      // jodi search input na thake  default data hobe
+
+      const result = await pendingCollections
+        .find(query)
+        .sort({ participant: -1 }) // boro theke choto 
+        .limit(8)                  
+        .toArray();
+
+      res.send(result);
+    }
+  } catch (err) {
+    res.status(500).send({ message: "Search failed", error: err.message });
+  }
+});
+
+
+
+  app.get("/search-contest", async (req, res) => {
+  try {
+    const type = req.query.type;
+
+    // type thakle & "All" na hole
+
+
+    if (type && type !== "All") {
+      const contests = await pendingCollections.find({
+        status: "approved",
+        contestType: { $regex: type, $options: "i" },
+      }).toArray();
+
+      res.send(contests);
+    } 
+    // type na thakle ba "All" hole
+
+    else {
+      const contests = await pendingCollections.find({
+        status: "approved",
+      }).toArray();
+
+      res.send(contests);
+    }
+
+  } catch (error) {
+    res.status(500).send({ message: "Error", error: error.message });
+  }
+});
+
 
     app.get("/all-approve-contest", async (req, res) => {
       const result = await pendingCollections
@@ -216,12 +284,18 @@ async function run() {
             participantInfo
           );
 
-          // update participant count
+          // update participant jie
 
+          const participant_email = session?.metadata?.participant_email;
           if (result.insertedId) {
             await pendingCollections.updateOne(
               { _id: new ObjectId(session?.metadata?.contestId) },
               { $inc: { participant: 1 } }
+            );
+
+            await usersCollections.updateOne(
+              { email: participant_email },
+              { $inc: { participated: 1 } }
             );
           }
 
@@ -236,7 +310,99 @@ async function run() {
       }
     });
 
+    // winner show for details page
+
+    app.get(`/condition-submit`, async (req, res) => {
+      try {
+        const { email, contestId } = req.query;
+        const result = await taskSubmissions.findOne({
+          participant_email: email,
+          contestId: contestId,
+        });
+        res.send(result);
+      } catch (err) {
+        res.status(400).send({ message: "can non get" });
+      }
+    });
+
+    app.get(`/single-winner`, async (req, res) => {
+      try {
+        const { contestId } = req.query;
+        const result = await taskSubmissions.findOne({
+          contestId: contestId,
+          isWinner: true,
+        });
+        res.send(result);
+      } catch (err) {
+        res.status(400).send({ message: "can non get" });
+      }
+    });
+
+    app.get(`/currUser-data`, async (req, res) => {
+      try {
+        const { email } = req.query;
+        const result = await usersCollections.findOne({ email });
+        res.send(result);
+      } catch (err) {
+        res.status(400).send({ message: "can non get" });
+      }
+    });
+
+    //update profile
+
+    app.patch(`/update-profile`, async (req, res) => {
+      try {
+        const { updateProfile } = req.body;
+        const email = updateProfile.email;
+        const result = await usersCollections.updateOne(
+          { email: email },
+          {
+            $set: {
+              name: updateProfile.name,
+              image: updateProfile.image,
+              address: updateProfile.address,
+            },
+          }
+        );
+        res.send(result);
+      } catch (err) {
+        res.status(400).send({ message: "updated failed" });
+      }
+    });
+
+
+
+    //----------sidebar conditional rendering 
+
+
+    app.get(`/user-role` , async (req , res) => {
+      try {
+        const {email} = req.query;
+        const result = await usersCollections.findOne({email})
+        res.send(result)
+      }catch (err) {
+        console.log(err)
+      }
+    })
+
+
+
+
     //------------------dashboard---------------
+
+    //my wining contest
+
+    app.get(`/my-winning`, async (req, res) => {
+      try {
+        const { email } = req.query;
+        const result = await taskSubmissions
+          .find({ participant_email: email, isWinner: true })
+          .toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(400).send({ message: "You have not won any contest yet" });
+      }
+    });
 
     //user my contest for query
 
@@ -304,8 +470,10 @@ async function run() {
 
     app.get(`/submit-task`, async (req, res) => {
       try {
-        const {contestId} = req.query;
-        const result = await taskSubmissions.find({ contestId :contestId }).toArray();
+        const { contestId } = req.query;
+        const result = await taskSubmissions
+          .find({ contestId: contestId })
+          .toArray();
         res.send(result);
       } catch (err) {
         console.log(err);
@@ -328,35 +496,51 @@ async function run() {
       }
     });
 
-     //winner declared
+    //winner declared
 
-    app.patch(`/announce-winner` , async (req , res) => {
+    app.patch(`/announce-winner`, async (req, res) => {
+      try {
+        const { _id, contestId } = req.body;
+        const alreadyWinner = await taskSubmissions.findOne({
+          contestId: contestId,
+          isWinner: true,
+        });
+        if (alreadyWinner) {
+          return res
+            .status(409)
+            .send({ message: "Winner is already declared" });
+        }
 
-      try{
-      const {_id , contestId} = req.body;
-      const alreadyWinner = await taskSubmissions.findOne({contestId:contestId , isWinner:true })
-      if(alreadyWinner) {
-       return  res.status(409).send({message:'Winner is already declared'});
-      }
+        const objectId = new ObjectId(_id);
 
-      const objectId = new ObjectId(_id)
+        const submission = await taskSubmissions.findOne({ _id: objectId });
+        if (!submission) {
+          return res.status(409).send({ message: "Submission not found" });
+        }
 
-      const submission = await taskSubmissions.findOne({_id: objectId}) ;
-      if (!submission) {
-        return res.status(409).send({message: 'Submission not found'})
-      }
+        await taskSubmissions.updateOne(
+          { _id: objectId },
+          { $set: { isWinner: true, declaredWinnerTime: new Date() } }
+        );
 
-      await taskSubmissions.updateOne({_id:objectId} , {$set : {isWinner:true , declaredWinnerTime: new Date()}}) 
+        await usersCollections.updateOne(
+          { email: submission.participant_email },
+          { $inc: { win: 1 } }
+        );
 
-      await usersCollections.updateOne({email: submission.participant_email} , {$inc:{win : 1}})
-
-      res.send({message:'Winner is declared successfully'})
+        await pendingCollections.updateOne(
+          { _id: new ObjectId(contestId) },
+          {
+            $set: {
+              deadline: 0,
+            },
+          }
+        );
+        res.send({ message: "Winner is declared successfully" });
       } catch (err) {
-        console.log(err.message)
+        console.log(err.message);
       }
-
-    })
-
+    });
 
     app.post("/user", async (req, res) => {
       const userData = req.body;
@@ -381,59 +565,31 @@ async function run() {
       res.send(result);
     });
 
-
-
-
     // get all users
 
+    app.get("/all-users", async (req, res) => {
+      try {
+           const result = await usersCollections.find({ role: { $ne: "admin" } }).toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err.message);
+        res.status(500).send({ error: "Failed to fetch users" }); // optional: error response
+      }
+    });
 
-  app.get("/all-users", async (req, res) => {
-  try {
-    const result = await usersCollections.find({}).toArray();
-    res.send(result);
-  } catch (err) {
-    console.log(err.message);
-    res.status(500).send({ error: "Failed to fetch users" }); // optional: error response
-  }
-});
-
-
-
-  app.patch(`/change-role` , async(req , res) => {
-
-    try{
-      const {email , role} = req.body;
-      console.log(email , role);
-      const result = await usersCollections.updateOne({email:email} , {$set: {role:role}});
-      res.send(result)
-    } catch(err) {
-      console.log(err.message)
-    }
-    
-
-  })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    app.patch(`/change-role`, async (req, res) => {
+      try {
+        const { email, role } = req.body;
+        console.log(email, role);
+        const result = await usersCollections.updateOne(
+          { email: email },
+          { $set: { role: role } }
+        );
+        res.send(result);
+      } catch (err) {
+        console.log(err.message);
+      }
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
